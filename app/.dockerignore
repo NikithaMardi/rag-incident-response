@@ -1,0 +1,11 @@
+.env
+chroma_db/
+__pycache__/
+aws/
+awscliv2.zip
+iac/
+.git/
+.gitignore
+README.md
+task-definition.json
+*.zip
