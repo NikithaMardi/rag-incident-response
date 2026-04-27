@@ -51,7 +51,7 @@ resource "aws_ecs_task_definition" "ecs_task_def" {
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          "awslogs-group"         = aws_cloudwatch_log_group.aws_log_group.arn
+          "awslogs-group"         = aws_cloudwatch_log_group.aws_log_group.name
           "awslogs-region"        = "us-east-1"
           "awslogs-stream-prefix" = "ecs"
         }
@@ -70,7 +70,7 @@ resource "aws_ecs_task_definition" "ecs_task_def" {
 ########### LOG GROUP ###################
 
 resource "aws_cloudwatch_log_group" "aws_log_group" {
-  name = "var.log_group"
+  name = var.log_group
 }
 
 ################# Task Execution Role and Policy ############
@@ -164,7 +164,7 @@ resource "aws_lb_target_group" "alb_tg" {
   port        = 8000
   protocol    = "HTTP"
   target_type = "ip"
-  vpc_id      = data.aws_vpc.default.id 
+  vpc_id      = var.vpc_id 
   health_check {
     path                = "/health"
     protocol            = "HTTP"
@@ -198,6 +198,11 @@ resource "aws_ecs_service" "ecs_service" {
     capacity_provider = "FARGATE"
     weight            = 1
   }
+  network_configuration {
+    subnets          = var.aws_alb.subnets
+    security_groups  = [aws_security_group.ecs_task_sg.id]
+    assign_public_ip = true
+}
   deployment_configuration {
     strategy = "ROLLING"
   }
@@ -208,3 +213,24 @@ resource "aws_ecs_service" "ecs_service" {
   }
   }
 
+resource "aws_security_group" "ecs_task_sg" {
+  name        = "ecs_task_sg"
+  description = "ecs task sg for efs"
+  vpc_id      = var.vpc_id 
+  ingress {
+
+            from_port        = 8000
+            to_port          = 8000
+            protocol         = "tcp"
+            security_groups  = [aws_security_group.alb_sg.id]
+            }
+  egress {
+        from_port   = 0
+        to_port     = 0
+        protocol    = "-1"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+  tags = {
+    Name = "ecs_task_sg"
+  }
+}
